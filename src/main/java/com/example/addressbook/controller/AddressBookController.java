@@ -20,7 +20,7 @@ public class AddressBookController {
 
     @GetMapping("/api/test")
     public String test() {
-        return "Test Successful";
+        return "Test Successful! Welcome to Address Book Application";
     }
 
     @RequestMapping({"", "/", "/get"})

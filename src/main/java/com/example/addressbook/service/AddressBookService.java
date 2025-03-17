@@ -45,6 +45,10 @@ public class AddressBookService implements IAddressBookService {
 
     @Override
     public void deleteAddressBookData(long id) {
-        addressBookRepository.deleteById(id);
+        try {
+            addressBookRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Employee Payroll not found with id: " + id);
+        }
     }
 }
