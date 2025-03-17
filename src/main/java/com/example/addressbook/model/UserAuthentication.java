@@ -35,7 +35,10 @@ public class UserAuthentication {
     @Column(nullable = false)
     private String password;
 
-    private String resetToken;
+    private String sessionToken;
 
+    @Column(nullable = false)
     private String role;
+
+    private String resetToken;
 }

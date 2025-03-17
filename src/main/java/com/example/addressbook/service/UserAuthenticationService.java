@@ -1,7 +1,6 @@
 package com.example.addressbook.service;
 
-import com.example.addressbook.dto.LoginDTO;
-import com.example.addressbook.dto.UserAuthenticationDTO;
+import com.example.addressbook.dto.*;
 import com.example.addressbook.exception.UserException;
 import com.example.addressbook.interfaces.IUserAuthenticationService;
 import com.example.addressbook.model.UserAuthentication;
@@ -53,10 +52,8 @@ public class UserAuthenticationService implements IUserAuthenticationService {
         UserAuthentication user = modelMapper.map(userDTO, UserAuthentication.class);
         user.setRole("User");
         String encodedPassword = passwordEncoder.encode(userDTO.getPassword());
-        String token = resetTokenUtil.generateResetToken();
 
         user.setPassword(encodedPassword);
-        user.setResetToken(token);
 
         userAuthenticationRepository.save(user);
         emailSenderService.sendEmail(user.getEmail(),"Registration Successful!",
@@ -66,7 +63,6 @@ public class UserAuthenticationService implements IUserAuthenticationService {
                 + "First Name: " + user.getFirstName() + "\n"
                 + "Last Name: " + user.getLastName() + "\n"
                 + "Email: " + user.getEmail() + "\n"
-                + "Token: " + token + "\n"
                 );
 
         return modelMapper.map(user, UserAuthenticationDTO.class);
@@ -106,16 +102,132 @@ public class UserAuthenticationService implements IUserAuthenticationService {
         UserAuthentication user = existsByEmail(loginDTO.getEmail());
         if (user != null && passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             String jwtToken = tokenUtil.createToken(user.getUserId(), user.getRole());
-
-
+            user.setSessionToken(jwtToken);
             emailSenderService.sendEmail(user.getEmail(),"Logged in Successfully!", "Hii...."+user.getFirstName()+"\n\n You have successfully logged in into MyAddressBook App!");
-            return "Congratulations!! You have logged in successfully!";
+            userAuthenticationRepository.save(user);
+            return "Congratulations!! You have logged in successfully!\n\n Your JWT token is: " + jwtToken;
         } else if (user == null) {
             throw new UserException("Sorry! User not Found!");
         } else if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             throw new UserException("Sorry! Password is incorrect!");
         } else {
             throw new UserException("Sorry! Email or Password is incorrect!");
+        }
+    }
+
+    /**
+     * This method logs out a user.
+     * It takes a JWT token as input and invalidates it.
+     *
+     * @param token - The JWT token of the user to be logged out.
+     * @return String - A success message.
+     * @throws UserException - If any error occurs during logout.
+     */
+    @Override
+    public String logout(String token) throws UserException {
+        if (tokenUtil.isTokenExpired(token))
+            throw new UserException("Session expired");
+
+        long userId = Long.parseLong(tokenUtil.decodeToken(token));
+        UserAuthentication user = existsById(userId);
+        if (user != null) {
+            user.setSessionToken(null);
+            userAuthenticationRepository.save(user);
+            return "Logout successfully!!";
+        } else {
+            throw new UserException("User not found");
+        }
+    }
+
+
+    /**
+     * This method resets the password for a user.
+     * It takes a JWT token and a ResetPasswordDTO object as input,
+     * verifies if the token is valid, updates the password, and sends a success email to the user.
+     *
+     * @param resetToken - The JWT token of the user whose password is to be reset.
+     * @param resetPasswordDTO - The ResetPasswordDTO object containing new password details.
+     * @return String - A success message.
+     * @throws UserException - If any error occurs during password reset.
+     */
+    @Override
+    public String resetPassword(String resetToken, ResetPasswordDTO resetPasswordDTO) throws UserException {
+        if (tokenUtil.isTokenExpired(resetToken))
+            throw new UserException("Token is expired");
+
+        String email = tokenUtil.decodeToken(resetToken);
+        UserAuthentication user = existsByEmail(email);
+        if (user != null) {
+            String password = resetPasswordDTO.getNewPassword();
+            String encodedPassword = passwordEncoder.encode(password);
+            user.setPassword(encodedPassword);
+            user.setResetToken(null);
+            userAuthenticationRepository.save(user);
+            emailSenderService.sendEmail(user.getEmail(),"Password Reset Successfully!", "Hii...."+user.getFirstName()+"\n\n Your password has been reset successfully!");
+            return "Password reset successfully!!";
+        } else {
+            throw new UserException("User not found" + " " + email + " " + resetToken);
+        }
+    }
+
+
+    /**
+     * This method sends a reset token to the user's email for password recovery.
+     * It takes a ForgotPasswordDTO object as input, verifies if the user exists,
+     * generates a reset token, and sends it to the user's email.
+     *
+     * @param forgotPasswordDTO - The ForgotPasswordDTO object containing user email.
+     * @return String - A success message.
+     * @throws UserException - If any error occurs during password recovery.
+     */
+    @Override
+    public String forgotPassword(ForgotPasswordDTO forgotPasswordDTO) throws UserException {
+        String email = forgotPasswordDTO.getEmail();
+        UserAuthentication user = existsByEmail(email);
+        if (user != null) {
+            String resetToken = tokenUtil.createToken(email, user.getRole());
+            user.setResetToken(resetToken);
+            userAuthenticationRepository.save(user);
+            String resetLink = "http://localhost:8080/reset-password";
+            emailSenderService.sendEmail(user.getEmail(), "Password Reset Request",
+                    "Hi " + user.getFirstName()
+                            + "\nIt is came to our attention that you request us for reseting your account password since you forgot it."
+                            + "\nIf this request isn't made by you, just don't worry. Just don't share the below credentials with anyone else\n\n"
+                            + "Click the link to reset your password: " + resetLink + "\n\nUse the following token in the header: " + resetToken);
+            return "Reset token sent to your email!";
+        } else {
+            throw new UserException("User not found");
+        }
+    }
+
+
+    /**
+     * This method changes the password for a user.
+     * It takes a JWT token and a ChangePasswordDTO object as input,
+     * verifies if the token is valid, updates the password, and sends a success email to the user.
+     *
+     * @param sessionToken - The JWT token of the user whose password is to be changed.
+     * @param changePasswordDTO - The ChangePasswordDTO object containing new password details.
+     * @return String - A success message.
+     * @throws UserException - If any error occurs during password change.
+     */
+    @Override
+    public String changePassword(String sessionToken, ChangePasswordDTO changePasswordDTO) throws UserException {
+        if (tokenUtil.isTokenExpired(sessionToken))
+            throw new UserException("Session expired!");
+
+        long userId = Long.parseLong(tokenUtil.decodeToken(sessionToken));
+        UserAuthentication user = existsById(userId);
+        if (user != null) {
+            String password = changePasswordDTO.getNewPassword();
+            String encodedPassword = passwordEncoder.encode(password);
+            user.setPassword(encodedPassword);
+            user.setResetToken(null);
+            userAuthenticationRepository.save(user);
+            emailSenderService.sendEmail(user.getEmail(),"Password Changed Successfully!", "Hii...."+user.getFirstName()+"\n\n Your password has been changed successfully!");
+            return "Password changed successfully!!";
+        } else {
+            throw new UserException("User not found");
         }
     }
 }

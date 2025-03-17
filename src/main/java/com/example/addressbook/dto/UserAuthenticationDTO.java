@@ -37,7 +37,7 @@ public class UserAuthenticationDTO {
 
     @NotNull(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
-    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&#_,.()^~+/<>:;`-])[A-Za-z\\d@$!%*?&]{8,}$",
             message = "Password must contain an uppercase letter, a lowercase letter, a number, and a special character")
     private String password;
 

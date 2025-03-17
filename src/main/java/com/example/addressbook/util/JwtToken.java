@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+
 /**
  * Utility class to create and decode JWT tokens.
  * It uses the HMAC256 algorithm for signing the tokens.
@@ -44,9 +46,11 @@ public class JwtToken {
         try {
             Algorithm algorithm = Algorithm.HMAC256(TOKEN_SECRET);  // HMAC256 algorithm for signing the token
 
-            String token = JWT.create()                     // Creating a new JWT token
+            String token = JWT.create()// Creating a new JWT token
                     .withSubject(id.toString())             // Setting the subject of the token to user ID
                     .withClaim("role", role)          // Setting the role claim
+                    .withIssuedAt(new Date())
+                    .withExpiresAt(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000))
                     .sign(algorithm);                       // Signing the token with the algorithm
             return token;
 
@@ -58,19 +62,67 @@ public class JwtToken {
         return null;
     }
 
+
     /**
-     * This method decodes the JWT token and retrieves the user ID from it.
+     * This method creates a JWT token with the given email and role.
+     * It uses HMAC256 algorithm for signing the token.
      *
-     * @param token - The JWT token
-     * @return Long - The user ID extracted from the token
+     * @param email - The user email
+     * @param role  - The user role
+     * @return String - The generated JWT token
      */
-    public Long decodeToken(String token) {
+    public String createToken(String email, String role)  {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(TOKEN_SECRET);  // HMAC256 algorithm for signing the token
+
+            String token = JWT.create()// Creating a new JWT token
+                    .withSubject(email)             // Setting the subject of the token to user ID
+                    .withClaim("role", role)          // Setting the role claim
+                    .withIssuedAt(new Date())
+                    .withExpiresAt(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000))
+                    .sign(algorithm);                       // Signing the token with the algorithm
+            return token;
+
+        } catch (JWTCreationException exception) {
+            exception.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    /**
+     * This method decodes the JWT token and extracts the user ID.
+     *
+     * @param token   - The JWT token
+     * @return String - The extracted user ID
+     */
+    public String decodeToken(String token) {
         try {
             JWTVerifier verifier = JWT.require(Algorithm.HMAC256(TOKEN_SECRET)).build();        // Creating a JWT verifier with the same algorithm used for signing
             DecodedJWT decodedJWT = verifier.verify(token);                 // Verifying the token
-            return decodedJWT.getClaim("user_id").asLong();             // Extracting the user ID from the token
+            return decodedJWT.getSubject();             // Extracting the user ID from the token
         } catch (JWTVerificationException e) {
             throw new RuntimeException("Invalid or expired token.");
+        }
+    }
+
+    /**
+     * This method checks if the token is expired.
+     *
+     * @param token - The JWT token
+     * @return boolean - true if the token is expired, false otherwise
+     */
+    public boolean isTokenExpired(String token) {
+        try {
+            JWTVerifier verifier = JWT.require(Algorithm.HMAC256(TOKEN_SECRET)).build();        // Creating a JWT verifier with the same algorithm used for signing
+            DecodedJWT decodedJWT = verifier.verify(token);                 // Verifying the token
+            return decodedJWT.getExpiresAt().before(new Date());          // Checking if the token is expired
+        } catch (JWTVerificationException e) {
+            throw new RuntimeException("Invalid or expired token.");
+        } catch (Exception e) {
+            throw new RuntimeException("Error while verifying token.");
         }
     }
 }
