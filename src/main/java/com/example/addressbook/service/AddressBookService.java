@@ -4,8 +4,10 @@ import com.example.addressbook.dto.AddressBookDTO;
 import com.example.addressbook.interfaces.IAddressBookService;
 import com.example.addressbook.model.AddressBook;
 import com.example.addressbook.repository.AddressBookRepository;
+import org.hibernate.annotations.Cache;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +31,7 @@ public class AddressBookService implements IAddressBookService {
      * @return List<AddressBookDTO> - List of AddressBookDTO
      */
     @Override
+    @Cacheable(value = "addressBookCache")
     public List<AddressBookDTO> getAddressBookData() {
         List<AddressBook> addressBooksLists = addressBookRepository.findAll();
         return addressBooksLists.stream()
@@ -44,6 +47,7 @@ public class AddressBookService implements IAddressBookService {
      * @return AddressBookDTO - The address book entry with the specified ID
      */
     @Override
+    @Cacheable(value = "addressBookCache", key = "#id")
     public AddressBookDTO getAddressBookDataById(long id) {
         AddressBook addressBook = addressBookRepository.findById(id).orElseThrow(() -> new RuntimeException("Employee Payroll not found with id: " + id));
         return modelMapper.map(addressBook, AddressBookDTO.class);

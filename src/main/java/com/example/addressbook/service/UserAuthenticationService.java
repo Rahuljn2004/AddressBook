@@ -11,6 +11,9 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.RedisTemplate;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * UserAuthenticationService class implements IUserAuthenticationService interface
@@ -37,6 +40,9 @@ public class UserAuthenticationService implements IUserAuthenticationService {
 
     @Autowired
     UserAuthenticationRepository userAuthenticationRepository;      // UserAuthenticationRepository is used to perform CRUD operations on UserAuthentication entity.
+
+    @Autowired
+    RedisTemplate<String, Object> redisTemplate;        // RedisTemplate is used to interact with Redis database.
 
     /**
      * This method registers a new user.
@@ -101,11 +107,12 @@ public class UserAuthenticationService implements IUserAuthenticationService {
     public String login(LoginDTO loginDTO) throws UserException {
         UserAuthentication user = existsByEmail(loginDTO.getEmail());
         if (user != null && passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
-            String jwtToken = tokenUtil.createToken(user.getUserId(), user.getRole());
-            user.setSessionToken(jwtToken);
+            String sessionToken = tokenUtil.createToken(user.getUserId(), user.getRole());
+//            user.setSessionToken(sessionToken);
+            redisTemplate.opsForValue().set("session:" + sessionToken, user, 10, TimeUnit.MINUTES);
             emailSenderService.sendEmail(user.getEmail(),"Logged in Successfully!", "Hii...."+user.getFirstName()+"\n\n You have successfully logged in into MyAddressBook App!");
-            userAuthenticationRepository.save(user);
-            return "Congratulations!! You have logged in successfully!\n\n Your JWT token is: " + jwtToken;
+//            userAuthenticationRepository.save(user);
+            return "Congratulations!! You have logged in successfully!\n\n Your JWT token is: " + sessionToken;
         } else if (user == null) {
             throw new UserException("Sorry! User not Found!");
         } else if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
@@ -119,20 +126,19 @@ public class UserAuthenticationService implements IUserAuthenticationService {
      * This method logs out a user.
      * It takes a JWT token as input and invalidates it.
      *
-     * @param token - The JWT token of the user to be logged out.
+     * @param sessionToken - The JWT token of the user to be logged out.
      * @return String - A success message.
      * @throws UserException - If any error occurs during logout.
      */
     @Override
-    public String logout(String token) throws UserException {
-        if (tokenUtil.isTokenExpired(token))
+    public String logout(String sessionToken) throws UserException {
+        if (tokenUtil.isTokenExpired(sessionToken))
             throw new UserException("Session expired");
 
-        long userId = Long.parseLong(tokenUtil.decodeToken(token));
+        long userId = Long.parseLong(tokenUtil.decodeToken(sessionToken));
         UserAuthentication user = existsById(userId);
         if (user != null) {
-            user.setSessionToken(null);
-            userAuthenticationRepository.save(user);
+            redisTemplate.delete(tokenUtil.decodeToken(sessionToken));
             return "Logout successfully!!";
         } else {
             throw new UserException("User not found");
