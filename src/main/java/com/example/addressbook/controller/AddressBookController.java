@@ -2,7 +2,6 @@ package com.example.addressbook.controller;
 
 import com.example.addressbook.dto.AddressBookDTO;
 import com.example.addressbook.dto.ResponseDTO;
-import com.example.addressbook.model.AddressBook;
 import com.example.addressbook.interfaces.IAddressBookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,13 +10,22 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controller for Address Book operations.
+ * Provides endpoints to manage address book data.
+ */
 @RestController
-@RequestMapping("/api/addressbook")
+@RequestMapping("/api/addressbook")     // Base URL for Address Book API
 public class AddressBookController {
 
+    // AddressBookService instance to perform CRUD operations on address book data.
     @Autowired
     IAddressBookService addressBookService;
 
+    /**
+     * Endpoint to get all address book entries.
+     * @return ResponseEntity with list of AddressBookDTO which contains all address book entries
+     */
     @RequestMapping(path = {"", "/"}, method = RequestMethod.GET)
     public ResponseEntity<ResponseDTO<?>> getAllAddressBook() {
         try {
@@ -28,6 +36,11 @@ public class AddressBookController {
         }
     }
 
+    /**
+     * Endpoint to get a specific address book entry by ID.
+     * @param id - The ID of the address book entry
+     * @return ResponseEntity with AddressBookDTO which contains the address book entry
+     */
     @GetMapping("/{id}")
     public ResponseEntity<ResponseDTO<?>> getContactById(@PathVariable Long id) {
         try {
@@ -38,6 +51,11 @@ public class AddressBookController {
         }
     }
 
+    /**
+     * Endpoint to add a new address book entry.
+     * @param AddressBookDTO - The address book entry to be added
+     * @return ResponseEntity with created AddressBookDTO
+     */
     @PostMapping("")
     public ResponseEntity<ResponseDTO<?>> addInAddressBook(@RequestBody AddressBookDTO AddressBookDTO) {
         try {
@@ -48,6 +66,12 @@ public class AddressBookController {
         }
     }
 
+    /**
+     * Endpoint to update an existing address book entry.
+     * @param id - The ID of the address book entry to be updated
+     * @param updatedAddressBook - The updated address book entry
+     * @return ResponseEntity with updated AddressBookDTO
+     */
     @PutMapping("/{id}")
     public ResponseEntity<ResponseDTO<?>> updateAddressBook(@PathVariable Long id, @RequestBody AddressBookDTO updatedAddressBook) {
         try {
@@ -61,6 +85,11 @@ public class AddressBookController {
         }
     }
 
+    /**
+     * Endpoint to delete an address book entry by ID.
+     * @param id - The ID of the address book entry to be deleted
+     * @return ResponseEntity with deletion status
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<ResponseDTO<?>> deleteAddressBook(@PathVariable Long id) {
         try {

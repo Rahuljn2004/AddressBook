@@ -4,6 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Generic response DTO class to standardize API responses.
+ *
+ * @param <T> the type of the data being returned
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

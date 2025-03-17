@@ -1,33 +1,37 @@
 package com.example.addressbook.model;
 
-import com.example.addressbook.dto.AddressBookDTO;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+/**
+ * AddressBook entity class representing the address book table in the database.
+ * This class is used to map the address book data to the database.
+ * It contains fields for first name, last name, email, address, and phone number.
+ * It also includes annotations for JPA entity mapping and validation.
+ */
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
+@Table(name = "ADDRESS_BOOK")
 public class AddressBook {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String address;
-    private long phoneNumber;
 
-    public AddressBook(AddressBookDTO addressBookDTO) {
-        this.firstName = addressBookDTO.getFirstName();
-        this.lastName = addressBookDTO.getLastName();
-        this.email = addressBookDTO.getEmail();
-        this.address = addressBookDTO.getAddress();
-        this.phoneNumber = addressBookDTO.getPhoneNumber();
-    }
+    @Column(nullable = false)
+    private String firstName;
+
+    @Column(nullable = false)
+    private String lastName;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    private String address;
+
+    private long phoneNumber;
 }
