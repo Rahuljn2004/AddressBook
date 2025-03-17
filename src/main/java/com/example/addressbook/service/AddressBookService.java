@@ -1,6 +1,7 @@
 package com.example.addressbook.service;
 
 import com.example.addressbook.dto.AddressBookDTO;
+import com.example.addressbook.interfaces.IAddressBookService;
 import com.example.addressbook.model.AddressBook;
 import com.example.addressbook.repository.AddressBookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,27 +13,32 @@ import java.util.List;
 public class AddressBookService implements IAddressBookService {
 
     @Autowired
-    private AddressBookRepository addressBookRepository;
+    AddressBookRepository addressBookRepository;
 
     @Override
-    public List<AddressBook> getAddressBookData() {
-        return addressBookRepository.findAll();
+    public List<AddressBookDTO> getAddressBookData() {
+        List<AddressBook> addressBooksLists = addressBookRepository.findAll();
+        return addressBooksLists.stream()
+                .map(AddressBookDTO::new)
+                .toList();
     }
 
     @Override
-    public AddressBook getAddressBookDataById(long id) {
-        return addressBookRepository.findById(id).orElseThrow(() -> new RuntimeException("Employee Payroll not found with id: " + id));
+    public AddressBookDTO getAddressBookDataById(long id) {
+        AddressBook addressBook = addressBookRepository.findById(id).orElseThrow(() -> new RuntimeException("Employee Payroll not found with id: " + id));
+        return new AddressBookDTO(addressBook);
     }
 
     @Override
-    public AddressBook createAddressBookData(AddressBookDTO addressBookDTO) {
-        AddressBook addressBook = new AddressBook(addressBookDTO);
-        return addressBookRepository.save(addressBook);
+    public AddressBookDTO createAddressBookData(AddressBookDTO addressBookDTO) {
+        AddressBook addressBook = addressBookRepository.save(new AddressBook(addressBookDTO));
+        return new AddressBookDTO(addressBook);
     }
 
     @Override
-    public boolean updateAddressBookData(AddressBook addressBook, AddressBookDTO updatedAddressBookDTO) {
+    public boolean updateAddressBookData(long id, AddressBookDTO updatedAddressBookDTO) {
         try {
+            AddressBook addressBook = addressBookRepository.findById(id).orElseThrow(() -> new RuntimeException("Employee Payroll not found with id: " + id));
             addressBook.setName(updatedAddressBookDTO.getName());
             addressBook.setAddress(updatedAddressBookDTO.getAddress());
             addressBook.setPhoneNumber(updatedAddressBookDTO.getPhoneNumber());
