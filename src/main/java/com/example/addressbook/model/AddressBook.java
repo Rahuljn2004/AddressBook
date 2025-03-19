@@ -2,8 +2,11 @@ package com.example.addressbook.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
 
 /**
  * AddressBook entity class representing the address book table in the database.
@@ -17,7 +20,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "ADDRESS_BOOK")
-public class AddressBook {
+@Builder
+public class AddressBook implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
@@ -28,10 +32,14 @@ public class AddressBook {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String email;
 
     private String address;
 
-    private long phoneNumber;
+    private String phoneNumber;
+
+    @ManyToOne(fetch = FetchType.LAZY)  // Lazy loading to optimize performance.
+    @JoinColumn(name = "user_id", nullable = false)  // Links contacts to a specific user
+    private UserAuthentication user;
 }

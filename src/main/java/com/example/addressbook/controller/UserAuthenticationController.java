@@ -64,25 +64,6 @@ public class UserAuthenticationController {
         }
     }
 
-    /**
-     * Endpoint to logout a user.
-     * @param sessionToken - The JWT sessionToken of the user to be logged out.
-     * @return ResponseEntity with logout message
-     */
-    @PostMapping("/logout")
-    public ResponseEntity<ResponseDTO<?>> logout(@RequestHeader String sessionToken) {
-        log.info("Logging out user with sessionToken: {}", sessionToken);
-        try {
-            String result = userAuthenticationService.logout(sessionToken);
-            ResponseDTO<String> responseUserDTO = new ResponseDTO<String>("Logout successfully!!", result);
-            return new ResponseEntity<>(responseUserDTO, HttpStatus.OK);
-        } catch (UserException e) {
-            log.error("Error logging out user: {}", e.getMessage());
-            ResponseDTO<String> responseUserDTO = new ResponseDTO<String>("Logout failed!!", e.getMessage());
-            return new ResponseEntity<>(responseUserDTO, HttpStatus.BAD_REQUEST);
-        }
-    }
-
 
     /**
      * Endpoint to reset password for a user.

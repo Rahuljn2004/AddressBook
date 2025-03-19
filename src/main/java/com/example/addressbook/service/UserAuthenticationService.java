@@ -6,8 +6,6 @@ import com.example.addressbook.interfaces.IUserAuthenticationService;
 import com.example.addressbook.model.UserAuthentication;
 import com.example.addressbook.repository.UserAuthenticationRepository;
 import com.example.addressbook.util.JwtToken;
-import com.example.addressbook.util.ResetToken;
-import org.apache.catalina.User;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +14,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.addressbook.service.MessageProducer;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,9 +30,6 @@ public class UserAuthenticationService implements IUserAuthenticationService {
 
     @Autowired
     JwtToken tokenUtil;     // JwtToken is used to generate JWT tokens.
-
-    @Autowired
-    ResetToken resetTokenUtil;  // ResetToken is used to generate reset tokens.
 
     @Autowired
     PasswordEncoder passwordEncoder;    // PasswordEncoder is used to encode passwords.
@@ -63,7 +59,7 @@ public class UserAuthenticationService implements IUserAuthenticationService {
     @Override
     @Transactional
     public UserAuthenticationDTO register(UserAuthenticationDTO userDTO) throws Exception {
-        if (existsByEmail(userDTO.getEmail()) != null) {
+        if (existsByEmail(userDTO.getEmail()).isPresent()) {
             throw new UserException("Email '" + userDTO.getEmail() + "' is already registered!");
         }
 
@@ -96,18 +92,8 @@ public class UserAuthenticationService implements IUserAuthenticationService {
      * @param email - The email address of the user.
      * @return UserAuthentication - The UserAuthentication object if the user exists, null otherwise.
      */
-    public UserAuthentication existsByEmail(String email) {
+    public Optional<UserAuthentication> existsByEmail(String email) {
         return userAuthenticationRepository.findByEmail(email);
-    }
-
-    /**
-     * This method checks if a user with the given ID exists in the database.
-     *
-     * @param id - The ID of the user.
-     * @return UserAuthentication - The UserAuthentication object if the user exists, null otherwise.
-     */
-    public UserAuthentication existsById(long id) {
-        return userAuthenticationRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
     /**
@@ -121,46 +107,23 @@ public class UserAuthenticationService implements IUserAuthenticationService {
      */
     @Override
     public String login(LoginDTO loginDTO) throws UserException {
-        UserAuthentication user = existsByEmail(loginDTO.getEmail());
-        if (user != null && passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
-            String sessionToken = tokenUtil.createToken(user.getUserId(), user.getRole());
+        Optional<UserAuthentication> user = existsByEmail(loginDTO.getEmail());
+        if (user.isPresent() && passwordEncoder.matches(loginDTO.getPassword(), user.get().getPassword())) {
+            String sessionToken = tokenUtil.createToken(user.get().getEmail(), user.get().getRole());
 //            user.setSessionToken(sessionToken);
-            redisTemplate.opsForValue().set("session:" + sessionToken, user, 10, TimeUnit.MINUTES);
-            emailSenderService.sendEmail(user.getEmail(),"Logged in Successfully!", "Hii...."+user.getFirstName()+"\n\n You have successfully logged in into MyAddressBook App!");
+//            redisTemplate.opsForValue().set("session:" + sessionToken, user, 10, TimeUnit.MINUTES);
+            emailSenderService.sendEmail(user.get().getEmail(),"Logged in Successfully!", "Hii...."+user.get().getFirstName()+"\n\n You have successfully logged in into MyAddressBook App!");
 //            userAuthenticationRepository.save(user);
-            String customMessage = "LOGIN|" + user.getEmail() + "|" + user.getFirstName() + " " + user.getLastName();
+            String customMessage = "LOGIN|" + user.get().getEmail() + "|" + user.get().getFirstName() + " " + user.get().getLastName();
             messageProducer.sendMessage(customMessage);
 
             return "Congratulations!! You have logged in successfully!\n\n Your JWT token is: " + sessionToken;
-        } else if (user == null) {
+        } else if (user.isEmpty()) {
             throw new UserException("Sorry! User not Found!");
-        } else if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+        } else if (!passwordEncoder.matches(loginDTO.getPassword(), user.get().getPassword())) {
             throw new UserException("Sorry! Password is incorrect!");
         } else {
             throw new UserException("Sorry! Email or Password is incorrect!");
-        }
-    }
-
-    /**
-     * This method logs out a user.
-     * It takes a JWT token as input and invalidates it.
-     *
-     * @param sessionToken - The JWT token of the user to be logged out.
-     * @return String - A success message.
-     * @throws UserException - If any error occurs during logout.
-     */
-    @Override
-    public String logout(String sessionToken) throws UserException {
-        if (tokenUtil.isTokenExpired(sessionToken))
-            throw new UserException("Session expired");
-
-        long userId = Long.parseLong(tokenUtil.decodeToken(sessionToken));
-        UserAuthentication user = existsById(userId);
-        if (user != null) {
-            redisTemplate.delete(tokenUtil.decodeToken(sessionToken));
-            return "Logout successfully!!";
-        } else {
-            throw new UserException("User not found");
         }
     }
 
@@ -181,14 +144,14 @@ public class UserAuthenticationService implements IUserAuthenticationService {
             throw new UserException("Token is expired");
 
         String email = tokenUtil.decodeToken(resetToken);
-        UserAuthentication user = existsByEmail(email);
-        if (user != null) {
+        Optional<UserAuthentication> user = existsByEmail(email);
+        if (user.isPresent()) {
             String password = resetPasswordDTO.getNewPassword();
             String encodedPassword = passwordEncoder.encode(password);
-            user.setPassword(encodedPassword);
-            user.setResetToken(null);
-            userAuthenticationRepository.save(user);
-            emailSenderService.sendEmail(user.getEmail(),"Password Reset Successfully!", "Hii...."+user.getFirstName()+"\n\n Your password has been reset successfully!");
+            user.get().setPassword(encodedPassword);
+            user.get().setResetToken(null);
+            userAuthenticationRepository.save(user.get());
+            emailSenderService.sendEmail(user.get().getEmail(),"Password Reset Successfully!", "Hii...."+user.get().getFirstName()+"\n\n Your password has been reset successfully!");
             return "Password reset successfully!!";
         } else {
             throw new UserException("User not found" + " " + email + " " + resetToken);
@@ -209,14 +172,14 @@ public class UserAuthenticationService implements IUserAuthenticationService {
     @Transactional
     public String forgotPassword(ForgotPasswordDTO forgotPasswordDTO) throws UserException {
         String email = forgotPasswordDTO.getEmail();
-        UserAuthentication user = existsByEmail(email);
-        if (user != null) {
-            String resetToken = tokenUtil.createToken(email, user.getRole());
-            user.setResetToken(resetToken);
-            userAuthenticationRepository.save(user);
+        Optional<UserAuthentication> user = existsByEmail(email);
+        if (user.isPresent()) {
+            String resetToken = tokenUtil.createToken(email, user.get().getRole());
+            user.get().setResetToken(resetToken);
+            userAuthenticationRepository.save(user.get());
             String resetLink = "http://localhost:8080/reset-password";
-            emailSenderService.sendEmail(user.getEmail(), "Password Reset Request",
-                    "Hi " + user.getFirstName()
+            emailSenderService.sendEmail(user.get().getEmail(), "Password Reset Request",
+                    "Hi " + user.get().getFirstName()
                             + "\nIt is came to our attention that you request us for reseting your account password since you forgot it."
                             + "\nIf this request isn't made by you, just don't worry. Just don't share the below credentials with anyone else\n\n"
                             + "Click the link to reset your password: " + resetLink + "\n\nUse the following token in the header: " + resetToken);
@@ -242,15 +205,15 @@ public class UserAuthenticationService implements IUserAuthenticationService {
         if (tokenUtil.isTokenExpired(sessionToken))
             throw new UserException("Session expired!");
 
-        long userId = Long.parseLong(tokenUtil.decodeToken(sessionToken));
-        UserAuthentication user = existsById(userId);
-        if (user != null) {
+        String email = tokenUtil.decodeToken(sessionToken);
+        Optional<UserAuthentication> user = existsByEmail(email);
+        if (user.isPresent()) {
             String password = changePasswordDTO.getNewPassword();
             String encodedPassword = passwordEncoder.encode(password);
-            user.setPassword(encodedPassword);
-            user.setResetToken(null);
-            userAuthenticationRepository.save(user);
-            emailSenderService.sendEmail(user.getEmail(),"Password Changed Successfully!", "Hii...."+user.getFirstName()+"\n\n Your password has been changed successfully!");
+            user.get().setPassword(encodedPassword);
+            user.get().setResetToken(null);
+            userAuthenticationRepository.save(user.get());
+            emailSenderService.sendEmail(user.get().getEmail(),"Password Changed Successfully!", "Hii...."+user.get().getFirstName()+"\n\n Your password has been changed successfully!");
             return "Password changed successfully!!";
         } else {
             throw new UserException("User not found");

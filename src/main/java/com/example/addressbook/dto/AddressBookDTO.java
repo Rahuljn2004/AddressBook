@@ -10,6 +10,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 /**
  * AddressBookDTO class for address book data transfer object.
  * This class is used to validate user input during address book operations.
@@ -19,7 +21,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class AddressBookDTO {
+public class AddressBookDTO implements Serializable {
 
     @NotNull(message = "First name is required")
     @Size(min = 3, max = 30, message = "First name must be between 3 and 30 characters")
@@ -38,10 +40,9 @@ public class AddressBookDTO {
 
     @NotNull(message = "Email is required")
     @Email(message = "Email must be valid")
-    @Column(unique = true)
     private String email;
 
     @NotNull(message = "Phone number is required")
     @Pattern(regexp = "^[6-9][0-9]{9}$", message = "Phone number must be 10 digits long")
-    private long phoneNumber;
+    private String phoneNumber;
 }
