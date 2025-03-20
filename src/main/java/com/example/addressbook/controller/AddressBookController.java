@@ -34,10 +34,10 @@ public class AddressBookController {
      */
     @GetMapping("/")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ResponseDTO<?>> getMyAllAddressBook(HttpServletRequest request) {
+    public ResponseEntity<ResponseDTO<?>> getMyAllAddressBook(@RequestHeader ("Authorization") String authorization) {
         log.info("Fetching all address book entries");
         try {
-            List<AddressBookDTO> addressBookData = addressBookService.getMyAddressBookData(request);
+            List<AddressBookDTO> addressBookData = addressBookService.getMyAddressBookData(authorization);
             return new ResponseEntity<>(new ResponseDTO<List<AddressBookDTO>>("Get All Address Book Data", addressBookData), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Error fetching address book entries: {}", e.getMessage());
@@ -52,10 +52,10 @@ public class AddressBookController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ResponseDTO<?>> getContactById(@PathVariable Long id, HttpServletRequest request) {
+    public ResponseEntity<ResponseDTO<?>> getContactById(@PathVariable Long id, @RequestHeader ("Authorization") String authorization) {
         log.info("Fetching address book entry with ID: {}", id);
         try {
-            AddressBookDTO addressBook = addressBookService.getAddressBookDataById(request, id);
+            AddressBookDTO addressBook = addressBookService.getAddressBookDataById(authorization, id);
             if (addressBook == null)
                 throw new AddressBookNotFoundException("Address Book entry not found for ID: " + id);
             return new ResponseEntity<>(new ResponseDTO<AddressBookDTO>("Get Call for ID Successful", addressBook), HttpStatus.OK);
@@ -89,10 +89,10 @@ public class AddressBookController {
      * @return ResponseEntity with updated AddressBookDTO
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ResponseDTO<?>> updateAddressBook(@PathVariable Long id, @Valid @RequestBody AddressBookDTO updatedAddressBook, HttpServletRequest request) {
+    public ResponseEntity<ResponseDTO<?>> updateAddressBook(@PathVariable Long id, @Valid @RequestBody AddressBookDTO updatedAddressBook, @RequestHeader ("Authorization") String authorization) {
         log.info("Updating address book entry with ID: {} to {}", id, updatedAddressBook);
         try {
-            AddressBookDTO addressBook = addressBookService.getAddressBookDataById(request, id);
+            AddressBookDTO addressBook = addressBookService.getAddressBookDataById(authorization, id);
             boolean operation = addressBookService.updateAddressBookData(id, updatedAddressBook);
             if (addressBook == null)
                 throw new AddressBookNotFoundException("Address Book entry not found for ID: " + id);
@@ -114,10 +114,10 @@ public class AddressBookController {
      * @return ResponseEntity with deletion status
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ResponseDTO<?>> deleteAddressBook(@PathVariable Long id, HttpServletRequest request) {
+    public ResponseEntity<ResponseDTO<?>> deleteAddressBook(@PathVariable Long id, @RequestHeader ("Authorization") String authorization) {
         log.info("Deleting address book entry with ID: {}", id);
         try {
-            AddressBookDTO addressBook = addressBookService.getAddressBookDataById(request, id);
+            AddressBookDTO addressBook = addressBookService.getAddressBookDataById(authorization, id);
             if (addressBook == null)
                 throw new AddressBookNotFoundException("Address Book entry not found for ID: " + id);
             addressBookService.deleteAddressBookData(id);

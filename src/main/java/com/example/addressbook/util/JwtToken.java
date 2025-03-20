@@ -24,7 +24,7 @@ public class JwtToken {
     @Autowired
     Environment env;    // Environment is used to access secret credentials and properties from environment variables.
 
-    private static String TOKEN_SECRET;
+    public static String TOKEN_SECRET;
     private static long EXPIRATION_TIME = 5 * 60 * 1000;
 
     /**
@@ -33,7 +33,8 @@ public class JwtToken {
      */
     @PostConstruct
     public void init() {
-        TOKEN_SECRET = env.getProperty("CLIENT_SECRET");
+        if(TOKEN_SECRET == null)
+            TOKEN_SECRET = env.getProperty("CLIENT_SECRET");
 //        TOKEN_SECRET = "Lock";
     }
 

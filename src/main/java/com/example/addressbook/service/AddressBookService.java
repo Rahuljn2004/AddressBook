@@ -17,6 +17,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -52,7 +53,26 @@ public class AddressBookService implements IAddressBookService {
      */
     @Override
     @Cacheable(value = "addressBookCache")
-    public List<AddressBookDTO> getMyAddressBookData(HttpServletRequest request) {
+    public List<AddressBookDTO> getMyAddressBookData(String authorization) {
+        Date expiryDate;
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            Calendar calendar = Calendar.getInstance();
+
+            // Add 1 minute to current time
+            calendar.add(Calendar.MINUTE, 1);
+
+            // Generate the new date
+            expiryDate = calendar.getTime();
+        } else {
+            String sessionToken = authorization.substring(7);
+            // Decode JWT to get expiration
+            expiryDate = jwtToken.getTokenExpiry(sessionToken);
+        }
+        long ttl = calculateTTL(expiryDate);
+
+        // Manually set TTL in Redis
+        redisTemplate.expire("addressBookCache", ttl, TimeUnit.SECONDS);
+
         String email = SecurityUtil.getAuthenticatedUserEmail();
         UserAuthentication user = userAuthenticationRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
@@ -71,12 +91,22 @@ public class AddressBookService implements IAddressBookService {
      */
     @Override
     @Cacheable(value = "addressBookCache", key = "#id")
-    public AddressBookDTO getAddressBookDataById(HttpServletRequest request, long id) {
-        String sessionToken = request.getHeader("sessionToken");
-        // Decode JWT to get expiration
-        Date expiryDate = jwtToken.getTokenExpiry(sessionToken);
-        long ttl = calculateTTL(expiryDate);
+    public AddressBookDTO getAddressBookDataById(String authorization, long id) {
+        Date expiryDate;
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            Calendar calendar = Calendar.getInstance();
 
+            // Add 1 minute to current time
+            calendar.add(Calendar.MINUTE, 1);
+
+            // Generate the new date
+            expiryDate = calendar.getTime();
+        } else {
+            String sessionToken = authorization.substring(7);
+            // Decode JWT to get expiration
+            expiryDate = jwtToken.getTokenExpiry(sessionToken);
+        }
+        long ttl = calculateTTL(expiryDate);
         // Manually set TTL in Redis
         redisTemplate.expire("addressBookCache::" + id, ttl, TimeUnit.SECONDS);
 

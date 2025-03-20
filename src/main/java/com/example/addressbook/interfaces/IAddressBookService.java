@@ -10,8 +10,8 @@ import java.util.List;
  * Provides methods to manage address book data.
  */
 public interface IAddressBookService {
-    List<AddressBookDTO> getMyAddressBookData(HttpServletRequest request);
-    AddressBookDTO getAddressBookDataById(HttpServletRequest request, long id);
+    List<AddressBookDTO> getMyAddressBookData(String authorization);
+    AddressBookDTO getAddressBookDataById(String authorization, long id);
     AddressBookDTO createAddressBookData(AddressBookDTO empPayrollDTO);
     boolean updateAddressBookData(long id, AddressBookDTO updatedAddressBookDTO);
     void deleteAddressBookData(long id);

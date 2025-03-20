@@ -114,12 +114,13 @@ public class UserAuthenticationController {
 
     /**
      * Endpoint to change password for a user.
-     * @param sessionToken - The JWT sessionToken of the user whose password is to be changed.
+     * @param Authorization - It contains JWT sessionToken of the user whose password is to be changed.
      * @param changePasswordDTO - The ChangePasswordDTO object containing new password details.
      * @return ResponseEntity with change password message
      */
     @PostMapping("/change-password")
-    public ResponseEntity<ResponseDTO<?>> changePassword(@RequestHeader String sessionToken, @Valid @RequestBody ChangePasswordDTO changePasswordDTO) {
+    public ResponseEntity<ResponseDTO<?>> changePassword(@RequestHeader String Authorization, @Valid @RequestBody ChangePasswordDTO changePasswordDTO) {
+        String sessionToken = Authorization.substring(7);
         log.info("Changing password for user with sessionToken: {}", sessionToken);
         try {
             if(!changePasswordDTO.getNewPassword().equals(changePasswordDTO.getConfirmPassword())) {

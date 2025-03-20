@@ -3,7 +3,9 @@ package com.example.addressbook.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * LoginDTO class for user login data transfer object.
@@ -12,6 +14,8 @@ import lombok.Data;
  * It also includes validation annotations to ensure the data meets certain criteria.
  */
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class LoginDTO {
 
     @NotNull(message = "Email is required")
